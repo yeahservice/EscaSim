@@ -70,7 +70,7 @@ class HexagonMap
       int q = std::get<0>(directions[direction]);
       int r = std::get<1>(directions[direction]);
       
-      std::cout << "Get Neighbor with q: " << q << " r: " << r << " direction: " << direction << std::endl;
+      //std::cout << "Get Neighbor with q: " << q << " r: " << r << " direction: " << direction << std::endl;
             
       return GetFieldAt((field->q_ + q), (field->r_ + r));
     }
@@ -80,7 +80,7 @@ class HexagonMap
       int q = std::get<0>(directions[direction]);
       int r = std::get<1>(directions[direction]);
       
-      std::cout << "Get Neighbor coords with q: " << q << " r: " << r << " direction: " << direction << std::endl;
+      //std::cout << "Get Neighbor coords with q: " << q << " r: " << r << " direction: " << direction << std::endl;
       
       return std::make_tuple((field_q + q), (field_r + r));
     }
@@ -92,12 +92,11 @@ class HexagonMap
       std::vector<HexagonField*> ring;
       bool is_dummy = false;
       
-      HexagonField* ring_field = GetNeighbor(center, 4);
+      HexagonField* ring_field = GetFieldAt(center->q_ - radius, center->r_ + radius);
       
       if (ring_field == NULL)  //hack for empty fields
       {
-        std::tuple<int, int> new_coords = GetNeighborCoords(center->q_, center->r_, 4);
-        ring_field = new HexagonField(std::get<0>(new_coords), std::get<1>(new_coords));
+        ring_field = new HexagonField(center->q_ - radius, center->r_ + radius);
         is_dummy = true;
         std::cout << "Created dummy field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
       }
@@ -110,11 +109,14 @@ class HexagonMap
         {
           HexagonField* neighbor;
           
+          std::cout << "At ring field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
+          
           if (!is_dummy)
           {
             ring.push_back(ring_field);
           }
           
+          //TODO if the last neighbor created in loop is a dummy it is not cleaned up
           neighbor = GetNeighbor(ring_field, i);
           
           if (neighbor == NULL) //create dummy field
@@ -129,7 +131,7 @@ class HexagonMap
             
             ring_field = new HexagonField(std::get<0>(new_coords), std::get<1>(new_coords));
             is_dummy = true;
-            std::cout << "Created dummy field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
+            //std::cout << "Created dummy field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
           }
           else
           {
@@ -175,7 +177,7 @@ class HexagonMap
           int prods = 0;
           int boosts = 1;
           
-          std::vector<HexagonField*> area_of_influence = GetSpiral(*fields_it, 1);
+          std::vector<HexagonField*> area_of_influence = GetSpiral(*fields_it, 3);
           std::vector<HexagonField*>::iterator area_of_influence_it;
 
           for (area_of_influence_it = area_of_influence.begin(); area_of_influence_it != area_of_influence.end(); ++area_of_influence_it)
