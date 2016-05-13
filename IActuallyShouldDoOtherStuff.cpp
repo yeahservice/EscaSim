@@ -7,6 +7,12 @@
 enum class Building {None, Ressource, Producer, Booster};
 enum Directions {North, NorthEast, SouthEast, South, SouthWest, NorthWest};
 
+template<typename T>
+std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::ostream>::type& stream, const T& e)
+{
+    return stream << static_cast<typename std::underlying_type<T>::type>(e);
+}
+
 class HexagonField
 {
 	public:
@@ -34,7 +40,10 @@ class HexagonField
 class HexagonMap
 {
   public:
-    HexagonMap()
+    
+    std::vector<HexagonField*> fields_;
+    
+    HexagonMap(int rings)
     {
       for (int q = 0; q < 201; ++q)
       {
@@ -44,25 +53,55 @@ class HexagonMap
         }
       }
       
+      //add center field
+      AddNewField(0, 0);
+      AddNewField(0, -1);
+      AddNewField(1, -1);
+      AddNewField(1, 0);
+      AddNewField(0, 1);
+      AddNewField(-1, 1);
+      AddNewField(-1, 0);
+      
+      for (int ring = 0; ring < rings; ++ring)
+      {
+        
+      }
+      
+      /*
       //test setup simple field
-      map_[100][100] = new HexagonField(0, 0);
-      fields_.push_back(map_[100][100]);
-      map_[100][100]->Build(Building::Producer);
+      HexagonField *field = new HexagonField(0, 0);
+      AddField(field);
+      field->Build(Building::Producer);
       
       //add one ressource in influence area
-      map_[100][99] = new HexagonField(0, -1);
-      fields_.push_back(map_[100][99]);
-      map_[100][99]->Build(Building::Ressource);
+      field = new HexagonField(0, -1);
+      AddField(field);
+      field->Build(Building::Ressource);
       
       //add one booster in influence area
-      map_[100][101] = new HexagonField(0, 1);
-      fields_.push_back(map_[100][101]);
-      map_[100][101]->Build(Building::Booster);
+      field = new HexagonField(0, 1);
+      AddField(field);
+      field->Build(Building::Booster);
       
       //add second ressource in influence area
-      map_[101][99] = new HexagonField(1, -1);
-      fields_.push_back(map_[101][99]);
-      map_[101][99]->Build(Building::Ressource);
+      field = new HexagonField(1, -1);
+      AddField(field);
+      field->Build(Building::Ressource);
+      */
+    }
+    
+    void AddNewField(int q, int r)
+    {
+      HexagonField *field = new HexagonField(q, r);
+      HexagonField *current = GetFieldAt(field->q_, field->r_);
+      if (current != NULL)
+      {
+        delete current;
+        current = NULL;
+      }
+      
+      map_[field->q_ + 100][field->r_ + 100 - std::min(0, field->q_)] = field;
+      fields_.push_back(field);
     }
     
     HexagonField* GetNeighbor(HexagonField *field, int direction)
@@ -87,7 +126,7 @@ class HexagonMap
     
     std::vector<HexagonField*> GetRing(HexagonField *center, int radius)
     {
-      std::cout << "Get ring with q: " << center->q_ << " r: " << center->r_ << " radius: " << radius << std::endl;
+      //std::cout << "Get ring with q: " << center->q_ << " r: " << center->r_ << " radius: " << radius << std::endl;
       
       std::vector<HexagonField*> ring;
       bool is_dummy = false;
@@ -98,10 +137,10 @@ class HexagonMap
       {
         ring_field = new HexagonField(center->q_ - radius, center->r_ + radius);
         is_dummy = true;
-        std::cout << "Created dummy field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
+        //std::cout << "Created dummy field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
       }
       
-      std::cout << "Starting field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl;
+      //std::cout << "Starting field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl;
       
       for (size_t i = 0; i < directions.size(); ++i)
       {
@@ -109,7 +148,7 @@ class HexagonMap
         {
           HexagonField* neighbor;
           
-          std::cout << "At ring field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
+          //std::cout << "At ring field q: " << ring_field->q_ << " r: " << ring_field->r_ << std::endl; 
           
           if (!is_dummy)
           {
@@ -141,7 +180,7 @@ class HexagonMap
         }
       }
       
-      std::cout << std::endl;
+      //std::cout << std::endl;
       
       return ring;
     }
@@ -182,7 +221,7 @@ class HexagonMap
 
           for (area_of_influence_it = area_of_influence.begin(); area_of_influence_it != area_of_influence.end(); ++area_of_influence_it)
           {
-            std::cout << "field in influence q: " << (*area_of_influence_it)->q_ << " r: " << (*area_of_influence_it)->r_ << std::endl;
+            //std::cout << "field in influence q: " << (*area_of_influence_it)->q_ << " r: " << (*area_of_influence_it)->r_ << std::endl;
             if ((*area_of_influence_it)->building_ == Building::Ressource) prods++;
             if ((*area_of_influence_it)->building_ == Building::Booster) boosts++;
           }
@@ -194,8 +233,18 @@ class HexagonMap
       return total_prod;
     }
     
+    void PrintMap()
+    {
+      std::vector<HexagonField*>::iterator fields_it;
+      
+      for (fields_it = fields_.begin(); fields_it != fields_.end(); ++fields_it)
+      {
+        std::cout << (*fields_it)->q_ << (*fields_it)->r_ << ": " << (*fields_it)->building_ << std::endl;
+      }
+      std::cout << std::endl;
+    }
+    
   private:
-    std::vector<HexagonField*> fields_;
     HexagonField* map_[201][201];
     
     //directions for axial coordinates
@@ -204,9 +253,84 @@ class HexagonMap
    
 };
 
+class Simulator
+{
+  public:
+    Simulator()
+    {
+      
+    }
+    
+    void Optimize (HexagonMap& map)
+    {
+      RecursiveOptimize(map, 0, 0);
+    }
+    
+    private:
+      int RecursiveOptimize(HexagonMap& map, int index, int highest_prod)
+      {
+        int prod = 0;
+        
+        map.fields_[index]->Build(Building::Ressource);
+        if ((index + 1) < map.fields_.size())
+        {
+          highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
+        }
+        else
+        {
+          prod = map.CalcTotalMapProduction();
+          if (highest_prod < prod)
+          {
+            highest_prod = prod;
+            std::cout << "Found higher total prod: " << highest_prod << std::endl;
+            map.PrintMap();
+          }
+        }
+        
+        map.fields_[index]->Build(Building::Producer);
+        if ((index + 1) < map.fields_.size())
+        {
+          highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
+        }
+        else
+        {
+          prod = map.CalcTotalMapProduction();
+          if (highest_prod < prod)
+          {
+            highest_prod = prod;
+            std::cout << "Found higher total prod: " << highest_prod << std::endl;
+            map.PrintMap();
+          }
+        }
+        
+        map.fields_[index]->Build(Building::Booster);
+        if ((index + 1) < map.fields_.size())
+        {
+          highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
+        }
+        else
+        {
+          prod = map.CalcTotalMapProduction();
+          if (highest_prod < prod)
+          {
+            highest_prod = prod;
+            std::cout << "Found higher total prod: " << highest_prod << std::endl;
+            map.PrintMap();
+          }
+        }
+          
+        return highest_prod;
+      }
+};
+
 int main()
 {
-  HexagonMap map;
-  std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
+  HexagonMap map(0);
+  //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
+  //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
+  
+  Simulator sim;
+  sim.Optimize(map);
+  
 	return 0;
 }
