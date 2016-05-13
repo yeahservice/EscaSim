@@ -55,12 +55,46 @@ class HexagonMap
       
       //add center field
       AddNewField(0, 0);
+      
       AddNewField(0, -1);
       AddNewField(1, -1);
       AddNewField(1, 0);
       AddNewField(0, 1);
       AddNewField(-1, 1);
       AddNewField(-1, 0);
+      
+      AddNewField(0, -2);
+      AddNewField(1, -2);
+      AddNewField(2, -2);
+      AddNewField(2, -1);
+      AddNewField(2, 0);
+      AddNewField(1, 1);
+      AddNewField(0, 2);
+      AddNewField(-1, 2);
+      AddNewField(-2, 2);
+      AddNewField(-2, 1);
+      AddNewField(-2, 0);
+      AddNewField(-1, -1);
+      
+      /*AddNewField(0, -3);
+      AddNewField(1, -3);
+      AddNewField(2, -3);
+      AddNewField(3, -3);
+      AddNewField(3, -2);
+      AddNewField(3, -1);
+      AddNewField(3, 0);
+      AddNewField(2, 1);
+      AddNewField(1, 2);
+      AddNewField(0, 3);
+      AddNewField(-1, 3);
+      AddNewField(-2, 3);
+      AddNewField(-3, 3);
+      AddNewField(-3, 2);
+      AddNewField(-3, 1);
+      AddNewField(-3, 0);
+      AddNewField(-2, -1);
+      AddNewField(-1, -2);
+      AddNewField(0, -3);*/
       
       for (int ring = 0; ring < rings; ++ring)
       {
@@ -96,6 +130,7 @@ class HexagonMap
       HexagonField *current = GetFieldAt(field->q_, field->r_);
       if (current != NULL)
       {
+        //TODO remove from map and fields
         delete current;
         current = NULL;
       }
@@ -155,7 +190,6 @@ class HexagonMap
             ring.push_back(ring_field);
           }
           
-          //TODO if the last neighbor created in loop is a dummy it is not cleaned up
           neighbor = GetNeighbor(ring_field, i);
           
           if (neighbor == NULL) //create dummy field
@@ -178,6 +212,12 @@ class HexagonMap
             is_dummy = false;
           }
         }
+      }
+      
+      if (is_dummy) //clean up last neighbor if it was a dummy
+      {
+        delete ring_field;
+        ring_field = NULL;
       }
       
       //std::cout << std::endl;
@@ -261,61 +301,61 @@ class Simulator
       
     }
     
-    void Optimize (HexagonMap& map)
+    void Optimize (HexagonMap *map)
     {
       RecursiveOptimize(map, 0, 0);
     }
     
     private:
-      int RecursiveOptimize(HexagonMap& map, int index, int highest_prod)
+      int RecursiveOptimize(HexagonMap *map, int index, int highest_prod)
       {
         int prod = 0;
         
-        map.fields_[index]->Build(Building::Ressource);
-        if ((index + 1) < map.fields_.size())
+        map->fields_[index]->Build(Building::Ressource);
+        if ((index + 1) < map->fields_.size())
         {
           highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
         }
         else
         {
-          prod = map.CalcTotalMapProduction();
+          prod = map->CalcTotalMapProduction();
           if (highest_prod < prod)
           {
             highest_prod = prod;
             std::cout << "Found higher total prod: " << highest_prod << std::endl;
-            map.PrintMap();
+            map->PrintMap();
           }
         }
         
-        map.fields_[index]->Build(Building::Producer);
-        if ((index + 1) < map.fields_.size())
+        map->fields_[index]->Build(Building::Producer);
+        if ((index + 1) < map->fields_.size())
         {
           highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
         }
         else
         {
-          prod = map.CalcTotalMapProduction();
+          prod = map->CalcTotalMapProduction();
           if (highest_prod < prod)
           {
             highest_prod = prod;
             std::cout << "Found higher total prod: " << highest_prod << std::endl;
-            map.PrintMap();
+            map->PrintMap();
           }
         }
         
-        map.fields_[index]->Build(Building::Booster);
-        if ((index + 1) < map.fields_.size())
+        map->fields_[index]->Build(Building::Booster);
+        if ((index + 1) < map->fields_.size())
         {
           highest_prod = RecursiveOptimize(map, index + 1, highest_prod);
         }
         else
         {
-          prod = map.CalcTotalMapProduction();
+          prod = map->CalcTotalMapProduction();
           if (highest_prod < prod)
           {
             highest_prod = prod;
             std::cout << "Found higher total prod: " << highest_prod << std::endl;
-            map.PrintMap();
+            map->PrintMap();
           }
         }
           
@@ -325,7 +365,7 @@ class Simulator
 
 int main()
 {
-  HexagonMap map(0);
+  HexagonMap *map = new HexagonMap(0);
   //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
   //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
   
