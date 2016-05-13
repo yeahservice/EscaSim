@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include <vector>
 #include <tuple>
 #include <cstddef>
@@ -15,7 +17,7 @@ std::ostream& operator<<(typename std::enable_if<std::is_enum<T>::value, std::os
 
 class HexagonField
 {
-	public:
+    public:
 	  //Use Axial coordinates, I think its called like that
     int q_; //something like column
     int r_; //something like row
@@ -119,7 +121,7 @@ class HexagonMap
       
       for (size_t i = 0; i < directions.size(); ++i)
       {
-        for (size_t j = 0; j < radius; ++j)
+        for (int j = 0; j < radius; ++j)
         {
           HexagonField* ring_field = GetFieldAt(q, r);
           
@@ -149,7 +151,7 @@ class HexagonMap
 
       for (size_t i = 0; i < directions.size(); ++i)
       {
-        for (size_t j = 0; j < radius; ++j)
+        for (int j = 0; j < radius; ++j)
         {
           ring_coords.push_back(std::make_tuple(q, r));
           
@@ -166,7 +168,7 @@ class HexagonMap
     {
       std::vector<HexagonField*> spiral;
       
-      for (size_t i = 1; i <= radius; ++i)
+      for (int i = 1; i <= radius; ++i)
       {
         std::vector<HexagonField*> ring = GetRing(center, i);
         spiral.insert(std::end(spiral), std::begin(ring), std::end(ring));
@@ -243,6 +245,36 @@ class Simulator
       RecursiveOptimize(map, 0, 0);
     }
     
+    void RandomOptimize (HexagonMap *map, int iterations)
+    {
+      std::vector<HexagonField*>::iterator fields_it;
+      
+      for (fields_it = map->fields_.begin(); fields_it != map->fields_.end(); ++fields_it)
+      {
+        (*fields_it)->Build(Building::Ressource);
+      }
+      
+      int random_field, random_building;
+      int highest_prod, prod = 0;
+      for (int i = 0; i < iterations; ++i)
+      {
+        prod = map->CalcTotalMapProduction();
+        if (highest_prod < prod)
+        {
+          highest_prod = prod;
+          std::cout << "Found higher total prod: " << highest_prod << std::endl;
+          map->PrintMap();
+        }
+        random_field = rand() % (map->fields_.size());
+        random_building = rand() % 3;
+        
+        if (random_building == 0) map->fields_[random_field]->Build(Building::Ressource);
+        if (random_building == 1) map->fields_[random_field]->Build(Building::Producer);
+        if (random_building == 2) map->fields_[random_field]->Build(Building::Booster);
+
+      }
+    }
+    
     private:
       int RecursiveOptimize(HexagonMap *map, int index, int highest_prod)
       {
@@ -302,12 +334,11 @@ class Simulator
 
 int main()
 {
-  HexagonMap *map = new HexagonMap(2);
-  //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
-  //std::cout << "Total production: " << map.CalcTotalMapProduction() << std::endl;
-  
+  HexagonMap *map = new HexagonMap(3);
+
   Simulator sim;
-  sim.Optimize(map);
+  //sim.Optimize(map);
+  sim.RandomOptimize(map, 1000000);
   
 	return 0;
 }
