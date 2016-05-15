@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <assert.h>
 
 #include <vector>
 #include <tuple>
@@ -87,13 +88,7 @@ class HexagonMap
     {
       HexagonField *field = new HexagonField(q, r);
       HexagonField *current = GetFieldAt(field->q_, field->r_);
-      if (current != NULL)
-      {
-        std::cout << "NOPE" << std::endl;
-        //TODO remove from map and fields
-        delete current;
-        current = NULL;
-      }
+      assert (current == NULL);
       
       map_[field->q_ + 100][field->r_ + 100 - std::min(0, field->q_)] = field;
       fields_.push_back(field);
@@ -128,6 +123,25 @@ class HexagonMap
       //std::cout << "Get Neighbor coords with q: " << q << " r: " << r << " direction: " << direction << std::endl;
       
       return std::make_tuple((field_q + q), (field_r + r));
+    }
+    
+    int GetNeighborCount(int field_q, int field_r)
+    {
+      int neighbors = 0;
+      int q, r;
+      
+      for (int i = 0; i < 6; ++i)
+      {
+        int q = std::get<0>(directions[i]);
+        int r = std::get<1>(directions[i]);
+              
+        if (GetFieldAt((field_q + q), (field_r + r)) != NULL)
+        {
+          neighbors++; 
+        }
+      }
+      
+      return neighbors;
     }
     
     std::vector<HexagonField*> GetRing(HexagonField *center, int radius)
@@ -269,6 +283,14 @@ class Simulator
     
     void RandomOptimize (HexagonMap *map, int iterations)
     {
+      RandomOptimizeInternal(map, iterations, 0);
+    }
+    
+    void RandomBuilding (HexagonMap *map, int number_of_fields, int iterations)
+    {
+      int highest_prod = 0;
+      int random_field, random_direction;
+      
       std::vector<HexagonField*>::iterator fields_it;
       
       for (fields_it = map->fields_.begin(); fields_it != map->fields_.end(); ++fields_it)
@@ -276,83 +298,41 @@ class Simulator
         (*fields_it)->Build(Building::Ressource);
       }
       
-      int random_field, random_building;
-      int highest_prod, prod = 0;
-      int prod_per_field = 0;
       for (int i = 0; i < iterations; ++i)
       {
-        prod = map->CalcTotalMapProduction();
+        int prod = map->CalcTotalMapProduction();
         if (highest_prod < prod)
         {
           highest_prod = prod;
-          prod_per_field = highest_prod / map->fields_.size();
-          std::cout << "Found higher total prod: " << highest_prod << " per field: " << prod_per_field << std::endl;
+          int prod_per_field = highest_prod / map->fields_.size();
+          std::cout << "Found higher total prod: " << highest_prod << " fields: "<< map->fields_.size() << " per field: " << prod_per_field << std::endl;
           map->PrintMap();
         }
-        random_field = rand() % (map->fields_.size());
-        random_building = rand() % 3;
         
-        if (random_building == 0) map->fields_[random_field]->Build(Building::Ressource);
-        else if (random_building == 1) map->fields_[random_field]->Build(Building::Producer);
-        else if (random_building == 2) map->fields_[random_field]->Build(Building::Booster);
-      }
-    }
-    
-    void RandomBuilding (HexagonMap *map, int number_of_fields, int iterations)
-    {
-      int random_field, random_building, q, r;
-      int highest_prod, prod = 0;
-      int prod_per_field = 0;
-      
-      for (int i = 0; i < number_of_fields; ++i)
-      {
+        //get random fields until one can get removed wihout being a possible connection field
+        int neighbor_count;
         do
         {
-          q = (rand() % 10) - 5;
-          r = (rand() % 10) - 5;
-        } while(map->GetFieldAt(q, r) != NULL);
-        
-        //std::cout << q << " " << r << std::endl;
-        HexagonField *field = map->AddNewField(q, r);
-        
-        random_building = rand() % 3;
-        
-        if (random_building == 0) field->Build(Building::Ressource);
-        else if (random_building == 1) field->Build(Building::Producer);
-        else if (random_building == 2) field->Build(Building::Booster);
-      }
-      //std::cout << "done" << std::endl;
-      
-      for (int i = 0; i < iterations; ++i)
-      {
-        prod = map->CalcTotalMapProduction();
-        if (highest_prod < prod)
-        {
-          highest_prod = prod;
-          prod_per_field = highest_prod / map->fields_.size();
-          std::cout << "Found higher total prod: " << highest_prod << " per field: " << prod_per_field << std::endl;
-          //map->PrintMap();
-        }
-        
-        random_field = rand() % (map->fields_.size());
+          random_field = rand() % (map->fields_.size());
+          neighbor_count = map->GetNeighborCount(map->fields_[random_field]->q_, map->fields_[random_field]->r_);
+        } while(neighbor_count != 4 && neighbor_count != 3);
+
         map->RemoveField(map->fields_[random_field]);
-
+        //get random field and direction and add a new tile there if possible, repeat until possible
+        
+        std::tuple<int, int> new_coords;
         do
         {
-          q = (rand() % 10) - 5;
-          r = (rand() % 10) - 5;
-        } while(map->GetFieldAt(q, r) != NULL);
+          random_field = rand() % (map->fields_.size());
+          random_direction = rand() % 6;
+          new_coords = map->GetNeighborCoords(map->fields_[random_field]->q_, map->fields_[random_field]->r_, random_direction);
+          //std::cout << std::get<0>(new_coords) << std::get<1>(new_coords);
+        } while((map->GetNeighbor(map->fields_[random_field], random_direction) != NULL) || (map->GetNeighborCount(std::get<0>(new_coords), std::get<1>(new_coords)) == 1));
 
-        //std::cout << q << " " << r << std::endl;
+        //std::tuple<int, int> new_coords = map->GetNeighborCoords(map->fields_[random_field]->q_, map->fields_[random_field]->r_, random_direction);
+        HexagonField *field = map->AddNewField(std::get<0>(new_coords), std::get<1>(new_coords));
         
-        HexagonField *field = map->AddNewField(q, r);
-            
-        random_building = rand() % 3;
-        
-        if (random_building == 0) field->Build(Building::Ressource);
-        else if (random_building == 1) field->Build(Building::Producer);
-        else if (random_building == 2) field->Build(Building::Booster);
-        
+        highest_prod = RandomOptimizeInternal(map, 10000, highest_prod); 
       }
     }
     
@@ -411,6 +391,39 @@ class Simulator
           
         return highest_prod;
       }
+      
+      int RandomOptimizeInternal(HexagonMap *map, int iterations, int highest_prod)
+      {
+        std::vector<HexagonField*>::iterator fields_it;
+        
+        for (fields_it = map->fields_.begin(); fields_it != map->fields_.end(); ++fields_it)
+        {
+          (*fields_it)->Build(Building::Ressource);
+        }
+        
+        int random_field, random_building;
+        int prod = 0;
+        int prod_per_field = 0;
+        for (int i = 0; i < iterations; ++i)
+        {
+          prod = map->CalcTotalMapProduction();
+          if (highest_prod < prod)
+          {
+            highest_prod = prod;
+            prod_per_field = highest_prod / map->fields_.size();
+            std::cout << "Found higher total prod: " << highest_prod << " fields: "<< map->fields_.size() << " per field: " << prod_per_field << std::endl;
+            map->PrintMap();
+          }
+          random_field = rand() % (map->fields_.size());
+          random_building = rand() % 3;
+          
+          if (random_building == 0) map->fields_[random_field]->Build(Building::Ressource);
+          else if (random_building == 1) map->fields_[random_field]->Build(Building::Producer);
+          else if (random_building == 2) map->fields_[random_field]->Build(Building::Booster);
+        }
+        
+        return highest_prod;
+      }
 };
 
 int main()
@@ -419,8 +432,8 @@ int main()
 
   Simulator sim;
   //sim.Optimize(map);
-  sim.RandomOptimize(map, 10000000);
-  //sim.RandomBuilding(map, 80, 1000000);
+  //sim.RandomOptimize(map, 10000000);
+  sim.RandomBuilding(map, 80, 100000);
   
 	return 0;
 }
