@@ -1,3 +1,3 @@
 # EscaSim
 
-Shitty simulator to "optimize" Escaria build layouts.
+Shitty random simulator to "optimize" Escaria build layouts.
